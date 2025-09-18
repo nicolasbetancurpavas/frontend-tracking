@@ -20,8 +20,6 @@ import {
   Button,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
-import AssignmentIndIcon from "@mui/icons-material/AssignmentInd";
-import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
 import ArrowBackIosNewIcon from "@mui/icons-material/ArrowBackIosNew";
 import AddIcon from "@mui/icons-material/Add";
 import { useEffect, useState, useCallback } from "react";
@@ -38,7 +36,6 @@ export default function UnassignedList() {
 
   const role = useAuthStore((s) => s.user?.role) as string | undefined;
   const userId = useAuthStore((s) => s.user?.id ?? null) as string | null;
-  const isAdmin = role === "admin";
 
   const [q, setQ] = useState("");
   const [loading, setLoading] = useState(false);

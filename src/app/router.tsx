@@ -6,7 +6,7 @@ import Layout from "../shared/components/Layout";
 import PanelEnvios from "../modules/envios/pages/MainItems";
 import UnassignedList from "../modules/envios/pages/UnassignedList";
 import HistoricShipments from "../modules/envios/pages/CheckpointList";
-import ShipmentTimeline from "../modules/envios/components/ShipmentTimeline";
+import TrackingPage from "../modules/envios/pages/Tracking";
 
 function IndexRedirect() {
   const token = useAuthStore((s) => s.token);
@@ -26,7 +26,7 @@ export const router = createBrowserRouter([
           { path: "menu", element: <PanelEnvios /> },
           { path: "envios/crear", element: <UnassignedList /> },
           { path: "historico/envios", element: <HistoricShipments /> },
-          { path: "historico", element: <ShipmentTimeline history={[]} /> },
+          { path: "historico", element: <TrackingPage /> },
         ],
       },
     ],

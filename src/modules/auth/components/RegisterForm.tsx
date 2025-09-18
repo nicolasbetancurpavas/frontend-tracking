@@ -14,7 +14,6 @@ import { useState, type ChangeEvent, type FormEvent } from "react";
 import { authRegister } from "../services/authService";
 import SocialDecor from "../../../shared/ui/SocialDecore";
 
-import { isHttpError } from "../../../shared/api/interfaces";
 import { parseJoiErrors } from "../../../shared/api/errros";
 import { isAxiosError } from "axios";
 

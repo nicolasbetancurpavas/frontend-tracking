@@ -1,120 +1,159 @@
-// Componente de timeline horizontal para tracking de una guía.
-// Comentarios en español, código en inglés.
-
-import { Box, Step, StepLabel, Stepper, Typography } from "@mui/material";
-import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
+import {
+  Box,
+  Typography,
+  TextField,
+  Stepper,
+  Step,
+  StepLabel,
+  Paper,
+} from "@mui/material";
+import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import RadioButtonUncheckedIcon from "@mui/icons-material/RadioButtonUnchecked";
-import { Fragment, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { getGuideHistoryByGuia } from "../services/shipmentService"; // ajusta si cambia el path
+
+type Estado = "asignado" | "transporte" | "entregado";
 
 export type HistoryItem = {
-  estado: "asignado" | "transporte" | "entregado";
-  fecha: string; // ISO
+  estado: Estado;
+  fecha: string;
   creado_por: string | null;
   equipo_transporte: number | null;
 };
 
-type Props = {
-  history: HistoryItem[]; // historial de la guía (ordenado o no)
-  // locale opcional para formateo de fecha (por defecto es el del navegador)
-  locale?: string;
-};
+const ORDER: Estado[] = ["asignado", "transporte", "entregado"];
 
-// Orden oficial del ciclo (definido por negocio)
-const ORDERED_STEPS: HistoryItem["estado"][] = [
-  "asignado",
-  "transporte",
-  "entregado",
-];
-
-// Etiquetas legibles para cada estado
-const LABELS: Record<HistoryItem["estado"], string> = {
+const LABELS: Record<Estado, string> = {
   asignado: "Asignado",
-  transporte: "En transporte",
+  transporte: "En tránsito",
   entregado: "Entregado",
 };
 
-export default function ShipmentTimeline({ history, locale }: Props) {
-  // Normalizamos el historial por estado, tomando el más reciente para cada uno
+export default function TrackingPage() {
+  const [guia, setGuia] = useState("");
+  const [history, setHistory] = useState<HistoryItem[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [touched, setTouched] = useState(false); // detecta si ya intentó buscar
+
+  const isValidGuia = /^[0-9]{11}$/.test(guia);
+
+  const fetchHistorial = async () => {
+    if (!isValidGuia) return;
+    setTouched(true);
+    try {
+      const res = await getGuideHistoryByGuia(guia);
+      console.log("data", res);
+      const data = res ?? [];
+      console.log("ss", data);
+      if (!data.length) {
+        setHistory(null);
+        setError("No hay información para esta guía");
+      } else {
+        setHistory(data);
+        setError(null);
+      }
+    } catch (err) {
+      setHistory(null);
+      setError("No hay información para esta guía");
+    }
+  };
+
+  // Limpia error si cambia el input
+  useEffect(() => {
+    setError(null);
+  }, [guia]);
+
   const byState = useMemo(() => {
-    const map = new Map<HistoryItem["estado"], HistoryItem>();
-    for (const item of history) {
+    const map = new Map<Estado, HistoryItem>();
+    history?.forEach((item) => {
       const prev = map.get(item.estado);
       if (!prev || new Date(item.fecha) > new Date(prev.fecha)) {
         map.set(item.estado, item);
       }
-    }
+    });
     return map;
   }, [history]);
 
-  // Paso activo = índice del último estado presente en el orden del ciclo
   const activeStep = useMemo(() => {
-    let idx = 0;
-    ORDERED_STEPS.forEach((s, i) => {
-      if (byState.has(s)) idx = i;
+    let idx = -1;
+    ORDER.forEach((estado, i) => {
+      if (byState.has(estado)) idx = i;
     });
     return idx;
   }, [byState]);
 
   return (
-    <Box>
-      {/* Stepper horizontal con 3 pasos */}
-      <Stepper alternativeLabel activeStep={activeStep}>
-        {ORDERED_STEPS.map((state) => {
-          const item = byState.get(state);
-          const completed = !!item; // completado si existe en historial
+    <Box sx={{ p: 4, maxWidth: 900, mx: "auto" }}>
+      <TextField
+        label="Buscar por número de guía"
+        value={guia}
+        onChange={(e) => setGuia(e.target.value)}
+        onKeyDown={(e) => e.key === "Enter" && fetchHistorial()}
+        fullWidth
+        margin="normal"
+        inputProps={{
+          maxLength: 11,
+          inputMode: "numeric",
+          pattern: "[0-9]*",
+        }}
+        error={guia.length > 0 && !isValidGuia}
+        helperText={
+          guia && !isValidGuia
+            ? "Debe contener exactamente 11 dígitos"
+            : "Presiona Enter para buscar"
+        }
+      />
 
-          return (
-            <Step key={state} completed={completed}>
-              <StepLabel
-                StepIconComponent={(props) =>
-                  completed ? (
-                    <CheckCircleOutlineIcon color="primary" />
-                  ) : (
-                    <RadioButtonUncheckedIcon
-                      color={props.active ? "primary" : "disabled"}
-                    />
-                  )
-                }
-              >
-                <Typography sx={{ fontWeight: 600 }}>
-                  {LABELS[state]}
-                </Typography>
+      {/* Mensaje de error si no hay info */}
+      {touched && error && (
+        <Typography mt={4} color="error" align="center">
+          {error}
+        </Typography>
+      )}
 
-                {/* Subtítulos: fecha + metadatos */}
-                <Metadata item={item} locale={locale} />
-              </StepLabel>
-            </Step>
-          );
-        })}
-      </Stepper>
+      {/* Stepper siempre visible (inicial o con datos) */}
+      <Paper elevation={3} sx={{ mt: 2, p: 3 }}>
+        <Stepper alternativeLabel activeStep={activeStep}>
+          {ORDER.map((estado) => {
+            const item = byState.get(estado);
+            const completed = !!item;
+
+            return (
+              <Step key={estado} completed={completed}>
+                <StepLabel
+                  StepIconComponent={() =>
+                    completed ? (
+                      <CheckCircleIcon color="primary" />
+                    ) : (
+                      <RadioButtonUncheckedIcon color="disabled" />
+                    )
+                  }
+                >
+                  <Typography variant="body2" fontWeight={600}>
+                    {LABELS[estado]}
+                  </Typography>
+
+                  <Typography variant="caption" color="text.secondary">
+                    {item ? new Date(item.fecha).toLocaleString() : "Pendiente"}
+                  </Typography>
+
+                  {item?.creado_por && (
+                    <Typography variant="caption" color="text.secondary">
+                      {`Actualizado por: ${item.creado_por}`}
+                    </Typography>
+                  )}
+
+                  {item?.equipo_transporte && (
+                    <Typography variant="caption" color="text.secondary">
+                      {`Equipo: ${item.equipo_transporte}`}
+                    </Typography>
+                  )}
+                </StepLabel>
+              </Step>
+            );
+          })}
+        </Stepper>
+      </Paper>
     </Box>
-  );
-}
-
-// Subcomponente para renderizar fecha/usuario/equipo debajo de cada estado
-function Metadata({ item, locale }: { item?: HistoryItem; locale?: string }) {
-  if (!item) {
-    return (
-      <Typography variant="caption" color="text.disabled" display="block">
-        Pendiente
-      </Typography>
-    );
-  }
-
-  const dt = new Date(item.fecha);
-  const dateStr = dt.toLocaleString(locale);
-
-  return (
-    <Fragment>
-      <Typography variant="caption" color="text.secondary" display="block">
-        {dateStr}
-      </Typography>
-      <Typography variant="caption" color="text.secondary" display="block">
-        Actualizado por: {item.creado_por ?? "-"}
-      </Typography>
-      <Typography variant="caption" color="text.secondary" display="block">
-        Equipo: {item.equipo_transporte ?? "-"}
-      </Typography>
-    </Fragment>
   );
 }

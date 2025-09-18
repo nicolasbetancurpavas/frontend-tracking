@@ -5,6 +5,7 @@ import type {
   IAsignacionGuia,
   ShipmentListItem,
 } from "../../../shared/api/interfaces";
+import type { HistoryItem } from "../pages/Tracking";
 
 export async function getshipments(guia?: string): Promise<ShipmentListItem[]> {
   const url = guia
@@ -32,6 +33,6 @@ export async function generationCheckpoint(dto: IAsignacionGuia) {
 }
 
 export async function getGuideHistoryByGuia(guia: string) {
-  const { data } = await logApi.get(`/hisotirc?guia=${guia}`);
-  return data.data.data as GuideCheckpointHistory[];
+  const { data } = await logApi.get(`/historic?guia=${guia}`);
+  return data.data as HistoryItem[];
 }
